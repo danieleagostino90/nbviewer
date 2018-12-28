@@ -1,0 +1,1040 @@
+
+
+
+ 
+
+
+Jupyter Notebook  
+Untitled1  (autosaved)  Current Kernel Logo  Logout  
+
+
+
+
+ 
+Python 3  
+  
+
+
+
+
+Trusted
+ 
+
+File
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Edit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+View
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Insert
+
+
+
+
+
+
+
+
+Cell
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Kernel
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Help
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Run
+CodeMarkdownRaw NBConvertHeading
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+This is a white paper prepared by Daniele D'Apuzzo to be delivered to Murray Low and Bryce. 
+
+The purpose of this paper is to complete both an analysis of the data (PCA), and a robustness test on the sample size of the population. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+This is the process layout:
+- import data from pdf's into DataFrames 
+- conduct a PCA on the data to find key evaluators
+
+
+
+
+In [1]:
+
+
+
+
+
+
+
+
+#IMPORTS
+from tabula import read_pdf
+import pandas as pd
+import os
+import numpy as np
+from sklearn.decomposition import PCA
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.model_selection import train_test_split
+import matplotlib.pyplot as plt
+import statistics
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#IMPORTS
+from tabula import read_pdf
+import pandas as pd
+import os
+import numpy as np
+from sklearn.decomposition import PCA
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.model_selection import train_test_split
+import matplotlib.pyplot as plt
+import statistics
+
+
+
+
+
+
+
+
+
+
+
+In [2]:
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#SET UP 
+​
+#set up directory path
+directory = "C:\\Users\\Owner\\Desktop\\Coach Report\\" 
+​
+#set up columns and index labels
+df = read_pdf("C:\\Users\\Owner\\Desktop\\Coach Report\\Aggregate.pdf")
+index = df['Unnamed: 0'].values[2:]
+columns = list(range(0, len(os.listdir(directory))))
+​
+#initialize tables
+table_self = pd.DataFrame(index= index, columns= range(len(os.listdir(directory))) )
+table_othe = pd.DataFrame(index= index, columns= range(len(os.listdir(directory))) )
+
+
+
+
+
+
+
+
+
+
+
+In [3]:
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#CREATE DATASET
+#RETRIEVE AND CLEAN UP DATA
+​
+#initiate col index
+col_index=0
+​
+#loop through the pdf files in the directory
+for report in os.listdir(directory):
+    
+    #for each file, extract table
+    app = read_pdf(directory + str(report))
+    
+    #remove nan values 
+    app = app[:][-len([x for x in app[app.columns.values[0]].values if str(x) != 'nan']):]
+    
+    #replace '-' with 0's
+    for i in app.index.values:
+        for j in app.columns.values:
+            if (app[str(j)][i]== '-'):
+                app[str(j)][i]='0 %'
+    
+    #change from string values to float percentages
+    for i in range(0, len(app[app.columns.values[1]].values)):
+        app[app.columns.values[1]].values[i] = float(app[app.columns.values[1]].values[i][:-1])/100
+        app[app.columns.values[2]].values[i] = float(app[app.columns.values[2]].values[i][:-1])/100
+    
+    #turn into dataframe to populate later the tables
+    app = pd.DataFrame( app[app.columns.values[1:3]].values, index = index, columns = app.columns[1:3].values )
+    
+    #populate tables with current report percentages
+    for i in app.index.values:
+        table_self[col_index][i]= app[str(app.columns.values[0])][i]
+        table_othe[col_index][i]= app[str(app.columns.values[1])][i]
+    
+    #update col index
+    col_index=col_index+1    
+    
+#drop last three rows because not important  
+table_self = table_self.drop(index[-4:-1])
+table_othe = table_othe.drop(index[-4:-1])
+​
+#merge tables into one
+table = table_self.T.join(table_othe.T, lsuffix='_self', rsuffix='_othe')
+​
+#REMOVE CATEGORIES
+table = table.drop(['Relating_self', 'Being_self', 'Achieving_self', 
+                    'Controlling_self', 'Protecting_self', 
+                    'Complying_self', 'Relating_othe', 'Being_othe',
+                    'Achieving_othe', 'Controlling_othe', 
+                    'Protecting_othe', 'Complying_othe'], axis=1)
+
+
+
+
+
+
+
+
+
+
+
+In [4]:
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#Feature Selection using Random Forest Regressor
+X_train, X_test, y_train, y_test = train_test_split(table.iloc[:, :-1],table.iloc[:,-1] , test_size=0.10)
+model = RandomForestRegressor(n_estimators = 100)
+model.fit(X_train,y_train)
+​
+features = table.columns
+importances = model.feature_importances_
+indices = np.argsort(importances)[-16:]  # top x features
+plt.title('Feature Importances')
+plt.barh(range(len(indices)), importances[indices], color='b', align='center')
+plt.yticks(range(len(indices)), [features[i] for i in indices])
+plt.xlabel('Relative Importance')
+​
+plt.show()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+In [ ]:
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+​
+
+
+
+
+
+
+
+
+
+
+
+In [47]:
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+table_f = pd.DataFrame(index = table.columns , columns = [list(range(100))+list(['Mean', 'Stdev', 'Stdev/Mean %'])])
+for i in range(100):
+    if (i>0):
+        model = RandomForestRegressor(n_estimators = i)
+        model.fit(X_train,y_train)
+        features = table.columns
+        importances = model.feature_importances_
+        indices = np.argsort(importances)[-10:]  # top 10 features
+        for j in list(range(10)):
+            table_f.T[features[indices][j]][i]= importances[indices][j]
+​
+#DROP ALL NAN ROWS
+table_f = table_f.dropna(how='all')
+​
+for i in table_f.T.columns:
+    table_f.T[i]['Mean'] = np.nanmean(table_f.T[i].values.tolist())
+    table_f.T[i]['Stdev'] = np.nanstd(table_f.T[i].values.tolist())
+    table_f.T[i]['Stdev/Mean %']= float(table_f.T[i]['Stdev'])/table_f.T[i]['Mean']*100
+
+
+
+
+
+
+
+
+
+
+
+In [ ]:
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+​
+
+
+
+
+
+
+
+
+
+
+
+In [ ]:
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+​
+
+
+
+
+
+
+
+
+
+
+
+In [112]:
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+table_var = pd.DataFrame( index = table.columns, columns =[list(['St.Dev', 'Stdev/Mean %'])])
+#STUDY OF VARIANCE
+​
+for i in table.columns:
+    table_var.T[i]['St.Dev']= statistics.stdev(table[i].values)
+    table_var.T[i]['Stdev/Mean %']= table_var.T[i]['St.Dev']/statistics.mean(table[i].values)
+
+
+
+
+
+
+
+
+
+
+
+In [ ]:
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+​
+
+
+
+
+
+
+
+
+
+
+
+In [ ]:
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+writer = pd.ExcelWriter('Leadership_Features_Analysis.xlsx')
+table_f.to_excel(writer, 'Feature Analysis')
+table_var.to_excel(writer, 'Robustness')
+writer.save()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+
